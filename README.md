@@ -19,8 +19,8 @@ This is a plain Java application designed to manage bank accounts with features 
 
 ### Clone the Repository
 ```bash
-git https://github.com/azizgouidercap/bnppb.git
-cd bankingapp
+git https://github.com/azizgouidercap/banking-app-bnp.git
+cd banking-app-bnp
 ```
 
 ### Build the Project
@@ -32,7 +32,7 @@ mvn clean package
 
 #### If Using a Fat JAR:
 ```bash
-java -jar target/bankingapp-1.0-SNAPSHOT.jar
+java -jar target/banking-app-bnp-1.0-SNAPSHOT.jar 
 ```
 
 ---
