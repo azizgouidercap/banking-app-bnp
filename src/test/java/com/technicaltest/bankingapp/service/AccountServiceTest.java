@@ -34,9 +34,6 @@ class AccountServiceTest {
     @Mock
     private AccountRepository accountRepository;
 
-    @Mock
-    private CalculationService calculationService;
-
     @InjectMocks
     private AccountService accountService;
 
@@ -110,146 +107,43 @@ class AccountServiceTest {
     }
 
     @Test
-    void depositMoney_shouldSucceed_whenAccountTypeIsChecking() {
+    void findById_shouldThrowException_whenAccountIsNotFound() {
         // Given
-        BigDecimal amount = BigDecimal.valueOf(500);
-        Account mockAccount = buildCheckingAccount(BigDecimal.valueOf(1000));
-        when(accountRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(mockAccount));
-        when(calculationService.addAmount(any(), any())).thenReturn(BigDecimal.valueOf(1500));
-
-        // When
-        accountService.depositMoney(DEFAULT_ID, amount);
-
-        // Then
-        assertThat(mockAccount.getBalance()).isEqualTo(BigDecimal.valueOf(1500));
-        ArgumentCaptor<CheckingAccount> checkingAccountArgumentCaptor = ArgumentCaptor.forClass(CheckingAccount.class);
-        verify(accountRepository, times(1)).save(checkingAccountArgumentCaptor.capture());
-        CheckingAccount checkingAccount = checkingAccountArgumentCaptor.getValue();
-        assertThat(checkingAccount.getBalance()).isEqualTo(BigDecimal.valueOf(1500));
-        verify(calculationService).addAmount(any(), any());
-    }
-
-    @Test
-    void depositMoney_shouldSucceed_whenAccountTypeIsSavings() {
-        // Given
-        BigDecimal amount = BigDecimal.valueOf(500);
-        Account mockAccount = buildSavingsAccount(BigDecimal.valueOf(1000), BigDecimal.valueOf(2000));
-        when(accountRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(mockAccount));
-        when(calculationService.addAmount(any(), any())).thenReturn(BigDecimal.valueOf(1500));
-
-        // When
-        accountService.depositMoney(DEFAULT_ID, amount);
-
-        // Then
-        assertThat(mockAccount.getBalance()).isEqualTo(BigDecimal.valueOf(1500));
-        ArgumentCaptor<SavingsAccount> savingsAccountArgumentCaptor = ArgumentCaptor.forClass(SavingsAccount.class);
-        verify(accountRepository, times(1)).save(savingsAccountArgumentCaptor.capture());
-        SavingsAccount savingsAccount = savingsAccountArgumentCaptor.getValue();
-        assertThat(savingsAccount.getBalance()).isEqualTo(BigDecimal.valueOf(1500));
-        assertThat(savingsAccount.getMonthlyInterestBase()).isEqualTo(BigDecimal.valueOf(2000));
-        verify(calculationService).addAmount(any(), any());
-    }
-
-    @Test
-    void depositMoney_shouldUpdateMonthInterestBase_whenOldValueIsLessThanCurrentValue() {
-        // Given
-        BigDecimal amount = BigDecimal.valueOf(500);
-        Account mockAccount = buildSavingsAccount(BigDecimal.valueOf(1000), BigDecimal.valueOf(1000));
-        when(accountRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(mockAccount));
-        when(calculationService.addAmount(any(), any())).thenReturn(BigDecimal.valueOf(1500));
-
-        // When
-        accountService.depositMoney(DEFAULT_ID, amount);
-
-        // Then
-        assertThat(mockAccount.getBalance()).isEqualTo(BigDecimal.valueOf(1500));
-        ArgumentCaptor<SavingsAccount> savingsAccountArgumentCaptor = ArgumentCaptor.forClass(SavingsAccount.class);
-        verify(accountRepository, times(1)).save(savingsAccountArgumentCaptor.capture());
-        SavingsAccount savingsAccount = savingsAccountArgumentCaptor.getValue();
-        assertThat(savingsAccount.getBalance()).isEqualTo(BigDecimal.valueOf(1500));
-        assertThat(savingsAccount.getMonthlyInterestBase()).isEqualTo(BigDecimal.valueOf(1500));
-        verify(calculationService).addAmount(any(), any());
-    }
-
-    @Test
-    void depositMoney_shouldThrowException_whenAccountIsNotFound() {
-        // Given
-        BigDecimal amount = BigDecimal.valueOf(500);
         when(accountRepository.findById(DEFAULT_ID)).thenReturn(Optional.empty());
 
         // When & Then
-        assertThatThrownBy(() -> accountService.depositMoney(DEFAULT_ID, amount))
+        assertThatThrownBy(() -> accountService.findById(DEFAULT_ID))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessage("Account with ID 1 not found.");
-        verify(calculationService, never()).addAmount(any(), any());
-        verify(accountRepository, never()).save(any());
+        verify(accountRepository).findById(any());
     }
 
     @Test
-    void withdrawMoney_shouldSucceed_whenAccountTypeIsChecking() {
+    void findById_shouldReturnAccount() {
         // Given
-        long accountId = 1L;
-        BigDecimal amount = BigDecimal.valueOf(200);
-        Account mockAccount = buildCheckingAccount(BigDecimal.valueOf(1000));
-        when(accountRepository.findById(accountId)).thenReturn(Optional.of(mockAccount));
-        when(calculationService.subtractAmount(any(), any())).thenReturn(BigDecimal.valueOf(800));
+        Account mockAccount = buildSavingsAccount(BigDecimal.valueOf(1000));
+        when(accountRepository.findById(DEFAULT_ID)).thenReturn(Optional.of(mockAccount));
 
-        // Act
-        accountService.withdrawMoney(accountId, amount);
+        // When
+        Account result = accountService.findById(DEFAULT_ID);
 
-        // Assert
-        assertThat(mockAccount.getBalance()).isEqualTo(BigDecimal.valueOf(800));
-        verify(accountRepository, times(1)).save(mockAccount);
+        // Then
+        assertThat(result).isEqualTo(mockAccount);
+        verify(accountRepository).findById(any());
     }
 
     @Test
-    void withdrawMoney_InsufficientBalance_ThrowsException() {
-        // Arrange
-        long accountId = 1L;
-        BigDecimal amount = BigDecimal.valueOf(1500);
-        Account mockAccount = buildCheckingAccount(BigDecimal.valueOf(1000));
-        when(accountRepository.findById(accountId)).thenReturn(Optional.of(mockAccount));
+    void save_shouldSucceed() {
+        // Given
+        Account account = buildSavingsAccount(BigDecimal.valueOf(1000));
+        Account mockAccount = buildSavingsAccount(BigDecimal.valueOf(1000));
+        when(accountRepository.save(any())).thenReturn(mockAccount);
 
-        // Act & Assert
-        assertThatThrownBy(() -> accountService.withdrawMoney(accountId, amount))
-                .isInstanceOf(InvalidOperationException.class)
-                .hasMessage("Insufficient balance for withdrawal.");
-        verify(calculationService, never()).subtractAmount(any(), any());
-        verify(accountRepository, never()).save(any());
-    }
+        // When
+        Account result = accountService.save(account);
 
-    @Test
-    void calculateInterest_SavingsAccount_Success() {
-        // Arrange
-        long accountId = 1L;
-        BigDecimal monthlyInterestBase = BigDecimal.valueOf(1000);
-        BigDecimal interest = BigDecimal.valueOf(50);
-        SavingsAccount mockAccount = buildSavingsAccount(BigDecimal.valueOf(1000), monthlyInterestBase);
-        when(accountRepository.findById(accountId)).thenReturn(Optional.of(mockAccount));
-        when(calculationService.calculateSavingsInterest(monthlyInterestBase)).thenReturn(interest);
-        when(calculationService.addAmount(any(), any())).thenReturn(BigDecimal.valueOf(1050));
-
-        // Act
-        BigDecimal result = accountService.calculateInterest(accountId);
-
-        // Assert
-        assertThat(result).isEqualTo(interest);
-        assertThat(mockAccount.getBalance()).isEqualTo(BigDecimal.valueOf(1050));
-        verify(accountRepository, times(1)).save(mockAccount);
-    }
-
-    @Test
-    void calculateInterest_InvalidAccountType_ThrowsException() {
-        // Arrange
-        long accountId = 1L;
-        Account mockAccount = buildCheckingAccount(BigDecimal.valueOf(1000));
-        when(accountRepository.findById(accountId)).thenReturn(Optional.of(mockAccount));
-
-        // Act & Assert
-        assertThatThrownBy(() -> accountService.calculateInterest(accountId))
-                .isInstanceOf(InvalidOperationException.class)
-                .hasMessage("Interest calculation is only applicable to savings accounts.");
-        verify(calculationService, never()).calculateSavingsInterest(any());
-        verify(accountRepository, never()).save(any());
+        // Then
+        assertThat(result).isEqualTo(mockAccount);
+        verify(accountRepository).save(any());
     }
 }

@@ -25,7 +25,7 @@ class AccountRepositoryTest {
                 .build();
 
         // When
-        SavingsAccount savedAccount = accountRepository.save(account);
+        SavingsAccount savedAccount = (SavingsAccount) accountRepository.save(account);
 
         // Then
         assertThat(savedAccount.getId()).isNotNull();
@@ -44,7 +44,7 @@ class AccountRepositoryTest {
                 .build();
 
         // When
-        CheckingAccount savedAccount = accountRepository.save(account);
+        CheckingAccount savedAccount = (CheckingAccount) accountRepository.save(account);
 
         // Then
         assertThat(savedAccount.getId()).isNotNull();

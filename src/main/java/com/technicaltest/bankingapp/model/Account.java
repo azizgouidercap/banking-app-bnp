@@ -5,16 +5,13 @@ import lombok.*;
 import lombok.experimental.SuperBuilder;
 
 import java.math.BigDecimal;
-import java.time.Instant;
 
 @Data
 @SuperBuilder(toBuilder = true)
-public abstract class Account {
-    private Long id;
+@EqualsAndHashCode(callSuper = true)
+public abstract class Account extends Entity {
     private String ownerName;
     private BigDecimal balance;
-    private Instant createdAt;
-    private Instant updatedAt;
 
     public abstract AccountType getAccountType();
 }
